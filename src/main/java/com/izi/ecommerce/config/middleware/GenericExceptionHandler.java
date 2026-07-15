@@ -2,6 +2,7 @@ package com.izi.ecommerce.config.middleware;
 
 import com.izi.ecommerce.common.errors.*;
 import com.izi.ecommerce.model.ErrorResponse;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -146,6 +147,20 @@ public class GenericExceptionHandler {
     ) {
         return ErrorResponse.builder()
                 .code(HttpStatus.FORBIDDEN.value())
+                .message(exception.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+
+    @ExceptionHandler(RequestNotPermitted.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public @ResponseBody ErrorResponse handleRateLimitException(
+            HttpServletRequest req,
+            RequestNotPermitted exception
+    ) {
+        return ErrorResponse.builder()
+                .code(HttpStatus.TOO_MANY_REQUESTS.value())
                 .message(exception.getMessage())
                 .timestamp(LocalDateTime.now())
                 .build();
