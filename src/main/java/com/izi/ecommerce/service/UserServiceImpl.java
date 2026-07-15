@@ -15,6 +15,7 @@ import com.izi.ecommerce.repository.RoleRepository;
 import com.izi.ecommerce.repository.UserRepository;
 import com.izi.ecommerce.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,21 +24,26 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CacheService cacheService;
+
+    private static final String USER_CACHE_KEY = "cache:user:";
+    private static final String USER_ROLES_CACHE_KEY = "cache:user:roles:";
 
     @Override
     @Transactional
     public UserResponse register(UserRegisterRequest userRegisterRequest) {
-        if (userRepository.existsByUsername(userRegisterRequest.getUsername())) {
+        if (existsByUsername(userRegisterRequest.getUsername())) {
             throw new UsernameAlreadyExistsException("Username already exists");
         }
 
-        if (userRepository.existsByEmail(userRegisterRequest.getEmail())) {
+        if (existsByEmail(userRegisterRequest.getEmail())) {
             throw new EmailAlreadyExitsException("Email already exists");
         }
 
@@ -48,11 +54,13 @@ public class UserServiceImpl implements UserService {
         Role defaultRole = roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new RoleNotFoundException("Default role ROLE_USER not found"));
 
+        String encodedPassword = passwordEncoder.encode(userRegisterRequest.getPassword());
+
         User user = User.builder()
                 .username(userRegisterRequest.getUsername())
                 .name(userRegisterRequest.getUsername())
                 .email(userRegisterRequest.getEmail())
-                .password(passwordEncoder.encode(userRegisterRequest.getPassword()))
+                .password(encodedPassword)
                 .enabled(true)
                 .build();
 
@@ -91,9 +99,11 @@ public class UserServiceImpl implements UserService {
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(()-> new UserNotFoundException("User not found with id"+id));
+        String oldUsername = user.getUsername();
+        String oldEmail = user.getEmail();
 
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
-            if (userRepository.existsByUsername(request.getUsername())) {
+            if (existsByUsername(request.getUsername())) {
                 throw new UsernameAlreadyExistsException("Username already exists");
             }
             user.setUsername(request.getUsername());
@@ -101,7 +111,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
-            if (userRepository.existsByEmail(request.getEmail())) {
+            if (existsByEmail(request.getEmail())) {
                 throw new EmailAlreadyExitsException("Email already exists");
             }
             user.setEmail(request.getEmail());
@@ -118,6 +128,10 @@ public class UserServiceImpl implements UserService {
 
         User savedUser = userRepository.save(user);
         List<Role> roles = roleRepository.findByUserId(savedUser.getUserId());
+        evictUserCache(oldUsername);
+        evictUserCache(oldEmail);
+        evictUserCache(savedUser.getUsername());
+        evictUserCache(savedUser.getEmail());
         return UserResponse.fromUserAndRoles(savedUser, roles);
     }
 
@@ -126,8 +140,13 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(()-> new UserNotFoundException("User not found with id"+id));
+        String username = user.getUsername();
+        String email = user.getEmail();
+
         userRoleRepository.deleteByIdUserId(user.getUserId());
         userRepository.delete(user);
+        evictUserCache(username);
+        evictUserCache(email);
     }
 
     @Override
@@ -138,5 +157,22 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
+    }
+
+    private void evictUserCache(String keyword) {
+        if (keyword == null) {
+            return;
+        }
+
+        cacheService.evict(getUserCacheKey(keyword));
+        cacheService.evict(getUserRolesCacheKey(keyword));
+    }
+
+    private String getUserCacheKey(String keyword) {
+        return USER_CACHE_KEY + keyword;
+    }
+
+    private String getUserRolesCacheKey(String keyword) {
+        return USER_ROLES_CACHE_KEY + keyword;
     }
 }
