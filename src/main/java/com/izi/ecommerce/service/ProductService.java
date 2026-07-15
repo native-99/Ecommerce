@@ -16,7 +16,7 @@ public interface ProductService {
 
     ProductResponse update(Long productId, ProductRequest request);
 
-    void delete(Long productId);
+    void delete(Long productId, Long userId);
 
     Page<ProductResponse> findByNameAndPageable(String name, Pageable pageable);
 

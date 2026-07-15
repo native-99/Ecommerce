@@ -28,6 +28,7 @@ public class ProductResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<CategoryResponse> categories;
+    private Long userId;
 
     public static ProductResponse fromProductAndCategories(
             Product product,
@@ -36,6 +37,7 @@ public class ProductResponse {
         return ProductResponse.builder()
                 .productId(product.getProductId())
                 .name(product.getName())
+                .userId(product.getUserId())
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .stockQuantity(product.getStockQuantity())

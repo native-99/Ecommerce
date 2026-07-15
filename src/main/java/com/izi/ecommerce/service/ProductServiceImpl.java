@@ -1,6 +1,7 @@
 package com.izi.ecommerce.service;
 
 import com.izi.ecommerce.common.errors.ResourceNotFoundException;
+import com.izi.ecommerce.common.errors.ForbiddenAccessException;
 import com.izi.ecommerce.entity.Category;
 import com.izi.ecommerce.entity.Product;
 import com.izi.ecommerce.entity.ProductCategory;
@@ -17,7 +18,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,15 +30,19 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductCategoryRepository productCategoryRepository;
 
+    private static final String PRODUCT_CACHE_KEY = "product";
+    private final CacheService cacheService;
+    private final RateLimitingService rateLimitingService;
 
 
     @Override
     public Page<ProductResponse> findByPage(Pageable pageable) {
-        return productRepository.findAll(pageable)
-                .map(product -> ProductResponse.fromProductAndCategories(
-                        product,
-                        getCategoryResponses(product.getProductId())
-                ));
+        return rateLimitingService.executeWithRateLimit("product_listing",
+                () -> productRepository.findAll(pageable)
+                        .map(product -> ProductResponse.fromProductAndCategories(
+                                product,
+                                getCategoryResponses(product.getProductId())
+                        )));
     }
 
     @Override
@@ -75,12 +82,23 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponse findById(Long productId) {
+        String cacheKey = getProductCacheKey(productId);
+        Optional<ProductResponse> cachedProduct = cacheService.get(cacheKey, ProductResponse.class);
+
+        if (cachedProduct.isPresent()) {
+            return cachedProduct.get();
+        }
+
         Product product = findProductById(productId);
 
-        return ProductResponse.fromProductAndCategories(
+        ProductResponse productResponse = ProductResponse.fromProductAndCategories(
                 product,
                 getCategoryResponses(product.getProductId())
         );
+
+        cacheService.put(cacheKey, productResponse);
+
+        return productResponse;
     }
 
     @Override
@@ -92,6 +110,7 @@ public class ProductServiceImpl implements ProductService {
                 .description(request.getDescription())
                 .stockQuantity(request.getStockQuantity())
                 .weight(request.getWeight())
+                .userId(request.getUser().getUserId())
                 .build();
 
         Product savedProduct = productRepository.save(product);
@@ -107,6 +126,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponse update(Long productId, ProductRequest request) {
         Product product = findProductById(productId);
+        validateProductOwner(product, request.getUser().getUserId());
 
         product.setName(request.getName());
         product.setPrice(request.getPrice());
@@ -116,6 +136,7 @@ public class ProductServiceImpl implements ProductService {
         Product updatedProduct = productRepository.save(product);
         productCategoryRepository.deleteByIdProductId(productId);
         saveProductCategories(productId, request.getCategoryIds());
+        cacheService.evict(getProductCacheKey(productId));
 
         return ProductResponse.fromProductAndCategories(
                 updatedProduct,
@@ -125,18 +146,30 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public void delete(Long productId) {
+    public void delete(Long productId, Long userId) {
         Product product = findProductById(productId);
+        validateProductOwner(product, userId);
 
         productCategoryRepository.deleteByIdProductId(productId);
         productRepository.delete(product);
+        cacheService.evict(getProductCacheKey(productId));
     }
 
+
+    private void validateProductOwner(Product product, Long userId) {
+        if (product.getUserId() == null || !product.getUserId().equals(userId)) {
+            throw new ForbiddenAccessException("Tidak boleh mengubah produk milik user lain");
+        }
+    }
 
 
     private Product findProductById(Long productId) {
         return productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produk tidak ditemukan"));
+    }
+
+    private String getProductCacheKey(Long productId) {
+        return PRODUCT_CACHE_KEY + ":" + productId;
     }
 
     private List<CategoryResponse> getCategoryResponses(Long productId) {

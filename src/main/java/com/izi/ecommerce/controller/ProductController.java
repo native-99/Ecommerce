@@ -1,8 +1,10 @@
 package com.izi.ecommerce.controller;
 
+import com.izi.ecommerce.common.PageUtil;
 import com.izi.ecommerce.model.PaginatedProductResponse;
 import com.izi.ecommerce.model.ProductRequest;
 import com.izi.ecommerce.model.ProductResponse;
+import com.izi.ecommerce.model.UserInfo;
 import com.izi.ecommerce.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +14,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -41,23 +44,7 @@ public class ProductController {
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String categoryName
     ) {
-        List<Sort.Order> orders = new ArrayList<>();
-
-        if (sort[0].contains(",")) {
-            for (String sortOrder : sort) {
-                String[] _sort = sortOrder.split(",");
-                orders.add(new Sort.Order(
-                        getSortDirection(_sort.length > 1 ? _sort[1] : "asc"),
-                        getProductSortProperty(_sort[0])
-                ));
-            }
-        } else {
-            orders.add(new Sort.Order(
-                    getSortDirection(sort.length > 1 ? sort[1] : "asc"),
-                    getProductSortProperty(sort[0])
-            ));
-        }
-
+        List<Sort.Order> orders = PageUtil.parseProductSortOrderRequest(sort);
         Pageable pageable = PageRequest.of(page, size, Sort.by(orders));
         Page<ProductResponse> productResponses;
 
@@ -77,6 +64,11 @@ public class ProductController {
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody ProductRequest request
     ) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserInfo userInfo = (UserInfo) authentication.getPrincipal();
+
+        request.setUser(userInfo.getUser());
+
         ProductResponse response = productService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -87,6 +79,10 @@ public class ProductController {
             @Valid @RequestBody ProductRequest request,
             @PathVariable(name = "id") Long productId
     ) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserInfo userInfo = (UserInfo) authentication.getPrincipal();
+        request.setUser(userInfo.getUser());
+
         return ResponseEntity.ok(productService.update(productId, request));
     }
 
@@ -95,25 +91,9 @@ public class ProductController {
     public ResponseEntity<Void> deleteProduct(
             @PathVariable(name = "id") Long productId
     ) {
-        productService.delete(productId);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserInfo userInfo = (UserInfo) authentication.getPrincipal();
+        productService.delete(productId, userInfo.getUser().getUserId());
         return ResponseEntity.noContent().build();
-    }
-
-    private Sort.Direction getSortDirection(String direction) {
-        if ("desc".equalsIgnoreCase(direction)) {
-            return Sort.Direction.DESC;
-        }
-
-        return Sort.Direction.ASC;
-    }
-
-    private String getProductSortProperty(String property) {
-        return switch (property) {
-            case "product_id" -> "productId";
-            case "stock_quantity" -> "stockQuantity";
-            case "created_at" -> "createdAt";
-            case "updated_at" -> "updatedAt";
-            default -> property;
-        };
     }
 }

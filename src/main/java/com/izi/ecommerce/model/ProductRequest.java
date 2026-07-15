@@ -1,11 +1,8 @@
 package com.izi.ecommerce.model;
 
 
-import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
+import com.izi.ecommerce.entity.User;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,25 +22,29 @@ public class ProductRequest {
 
     @NotBlank(message = "Nama produk tidak boleh kosong")
     @Size(min = 2, max = 100, message = "Nama produk harus antara 2 dan 100 karakter")
-    String name;
+    private String name;
 
     @NotNull(message = "Harga tidak boleh kosong")
     @Positive(message = "Harga harus lebih besar dari 0")
     @Digits(integer = 10, fraction = 2, message = "Harga harus memiliki maksimal 10 digit dan 2 angka di belakang koma")
-    BigDecimal price;
+    private BigDecimal price;
 
     @NotNull(message = "Deskripsi produk tidak boleh null")
     @Size(max = 1000, message = "Deskripsi produk tidak boleh lebih dari 1000 karakter")
-    String description;
+    private String description;
 
     @NotNull(message = "Stok produk tidak boleh kosong")
     @Positive(message = "Stok produk harus lebih besar dari 0")
-    Integer stockQuantity;
+    private Integer stockQuantity;
 
     @NotNull(message = "Berat produk tidak boleh kosong")
     @Positive(message = "Berat produk harus lebih besar dari 0")
     @Digits(integer = 10, fraction = 2, message = "Berat produk harus memiliki maksimal 10 digit dan 2 angka di belakang koma")
-    BigDecimal weight;
+    private BigDecimal weight;
 
-    List<Long> categoryIds;
+    @NotEmpty(message = "Harus ada satu category yang dipilih")
+    private List<Long> categoryIds;
+
+
+    private User user;
 }

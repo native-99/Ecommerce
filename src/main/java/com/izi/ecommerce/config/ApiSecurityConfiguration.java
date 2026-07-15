@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -21,7 +22,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,12 +43,14 @@ public class ApiSecurityConfiguration {
                     registry.requestMatchers(
                             "/auth/**",
                             "/hello",
-                            "/products/**",
                             "/api-docs/**",
                             "/v3/api-docs/**",
                             "/swagger-ui/**",
-                            "/swagger-ui.html"
+                            "/swagger-ui.html",
+                            "/webhook/xendit"
                     ).permitAll();
+                    registry.requestMatchers(HttpMethod.GET, "/products/**").permitAll();
+                    registry.requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN");
                     registry.anyRequest().authenticated();
                 })
                 .sessionManagement(configurer -> {
