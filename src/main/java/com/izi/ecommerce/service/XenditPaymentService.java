@@ -1,5 +1,6 @@
 package com.izi.ecommerce.service;
 
+import com.izi.ecommerce.common.OrderStateTransition;
 import com.izi.ecommerce.common.errors.ResourceNotFoundException;
 import com.izi.ecommerce.entity.Order;
 import com.izi.ecommerce.entity.User;
@@ -89,22 +90,92 @@ public class XenditPaymentService implements
 
         order.setXenditPaymentStatus(status);
         switch (status) {
-            case "PAID":
-                order.setStatus(OrderStatus.PAID);
+          case "PAID": {
+                OrderStatus currentStatus = order.getStatus();
+                OrderStatus newStatus = OrderStatus.PAID;
+
+                // Webhook duplikat: tidak perlu kirim email lagi
+                if (currentStatus == newStatus) {
+                    break;
+                }
+
+                // Periksa apakah perubahan status diperbolehkan
+                if (!OrderStateTransition.isValidTransition(currentStatus, newStatus)) {
+                    log.warn(
+                            "Invalid order status transition from {} to {}",
+                            currentStatus,
+                            newStatus
+                    );
+                    return;
+                }
+
+                order.setStatus(newStatus);
                 emailService.notifySuccessfulPayment(order);
                 break;
-            case "EXPIRED":
-                order.setStatus(OrderStatus.CANCELLED);
+            }
+            case "EXPIRED": {
+                OrderStatus currentStatus = order.getStatus();
+                OrderStatus newStatus = OrderStatus.CANCELLED;
+
+                if (currentStatus == newStatus) {
+                    break; // webhook duplikat, jangan kirim email lagi
+                }
+
+                if (!OrderStateTransition.isValidTransition(currentStatus, newStatus)) {
+                    log.warn(
+                            "Invalid order status transition from {} to {}",
+                            currentStatus,
+                            newStatus
+                    );
+                    return;
+                }
+
+                order.setStatus(newStatus);
                 emailService.notifyUnsuccessfulPayment(order);
                 break;
-            case "FAILED":
-                order.setStatus(OrderStatus.PAYMENT_FAILED);
+            }
+            case "FAILED": {
+                OrderStatus currentStatus = order.getStatus();
+                OrderStatus newStatus = OrderStatus.PAYMENT_FAILED;
+
+                if (currentStatus == newStatus) {
+                    break; // webhook duplikat, jangan kirim email lagi
+                }
+
+                if (!OrderStateTransition.isValidTransition(currentStatus, newStatus)) {
+                    log.warn(
+                            "Invalid order status transition from {} to {}",
+                            currentStatus,
+                            newStatus
+                    );
+                    return;
+                }
+
+                order.setStatus(newStatus);
                 emailService.notifyUnsuccessfulPayment(order);
                 break;
-            case "PENDING":
-                order.setStatus(OrderStatus.PENDING);
+            }
+            case "PENDING": {
+                OrderStatus currentStatus = order.getStatus();
+                OrderStatus newStatus = OrderStatus.PENDING;
+
+                if (currentStatus == newStatus) {
+                    break; // webhook duplikat, jangan kirim email lagi
+                }
+
+                if (!OrderStateTransition.isValidTransition(currentStatus, newStatus)) {
+                    log.warn(
+                            "Invalid order status transition from {} to {}",
+                            currentStatus,
+                            newStatus
+                    );
+                    return;
+                }
+
+                order.setStatus(newStatus);
                 emailService.notifyUnsuccessfulPayment(order);
                 break;
+            }
             default:
         }
 
