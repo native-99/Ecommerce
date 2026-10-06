@@ -50,7 +50,19 @@ public class ApiSecurityConfiguration {
                             "/webhook/xendit"
                     ).permitAll();
                     registry.requestMatchers(HttpMethod.GET, "/products/**").permitAll();
-                    registry.requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN");
+                    registry.requestMatchers("/admin/**")
+                            .hasAuthority("ROLE_ADMIN");
+
+                    registry.requestMatchers(
+                            HttpMethod.PUT,
+                            "/orders/*/status"
+                    ).hasAuthority("ROLE_ADMIN");
+
+                    registry.requestMatchers(
+                            HttpMethod.POST,
+                            "/shippings/order"
+                    ).hasAuthority("ROLE_ADMIN");
+
                     registry.anyRequest().authenticated();
                 })
                 .sessionManagement(configurer -> {
