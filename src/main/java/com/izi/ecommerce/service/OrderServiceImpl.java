@@ -319,6 +319,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public Page<OrderResponse> findAllOrdersByPageable(Pageable pageable) {
+        return orderRepository.findAll(pageable)
+                .map(OrderResponse::fromOrder);
+    }
+
+    @Override
     public Double calculateOrderTotal(Long orderId) {
         return orderItemRepository.calculateTotalOrder(orderId);
     }

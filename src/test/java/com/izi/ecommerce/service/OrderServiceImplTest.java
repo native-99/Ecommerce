@@ -26,6 +26,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.izi.ecommerce.common.errors.InventoryException;
 import static org.mockito.Mockito.never;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -331,5 +335,17 @@ class OrderServiceImplTest {
 
         assertThrows(ResourceNotFoundException.class,
                 () -> orderService.findOrderOwnedByUser(5L, buyer.getUserId()));
+    }
+
+    @Test
+    void testFindAllOrdersByPageable_ReturnsOrdersOfAllUsers() {
+        PageRequest pageable = PageRequest.of(0, 10);
+        Order buyerOrder = Order.builder().orderId(1L).userId(buyer.getUserId()).build();
+        Order sellerOrder = Order.builder().orderId(2L).userId(seller.getUserId()).build();
+        when(orderRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(buyerOrder, sellerOrder)));
+
+        Page<OrderResponse> result = orderService.findAllOrdersByPageable(pageable);
+
+        assertEquals(2, result.getTotalElements());
     }
 }

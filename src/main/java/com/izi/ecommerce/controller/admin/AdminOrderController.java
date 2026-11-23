@@ -32,22 +32,18 @@ public class AdminOrderController {
     private final OrderService orderService;
 
     @GetMapping("")
-    public ResponseEntity<PaginatedOrderResponse> findOrdersByUserId(
+    public ResponseEntity<PaginatedOrderResponse> findAllOrders(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "order_id,desc") String[] sort
     ) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserInfo userInfo = (UserInfo) authentication.getPrincipal();
-
         List<Order> sortOrder = PageUtil.parseSortOrderRequest(sort);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortOrder));
 
-        Page<OrderResponse> userOrders = orderService.findOrdersByUserIdAndPageable(userInfo.getUser()
-                .getUserId(), pageable);
+        Page<OrderResponse> orders = orderService.findAllOrdersByPageable(pageable);
 
-        PaginatedOrderResponse paginatedOrderResponse = orderService.convertOrderPage(userOrders);
+        PaginatedOrderResponse paginatedOrderResponse = orderService.convertOrderPage(orders);
         return ResponseEntity.ok(paginatedOrderResponse);
     }
 

@@ -31,5 +31,7 @@ public interface OrderService {
 
     Page<OrderResponse> findOrdersByUserIdAndPageable(Long userId, Pageable pageable);
 
+    Page<OrderResponse> findAllOrdersByPageable(Pageable pageable);
+
     PaginatedOrderResponse convertOrderPage(Page<OrderResponse> orderPage);
 }
