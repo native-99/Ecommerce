@@ -34,6 +34,7 @@ jobs:
           --health-retries 5
     env:
       APP_JWT_SECRET: ci-jwt-secret-change-me-32-bytes-minimum
+      SPRING_DATASOURCE_PASSWORD: "your-secret-here"
 
     steps:
       - uses: actions/checkout@v4
