@@ -139,7 +139,7 @@ class OrderServiceImplTest {
 
     @Test
     void testCheckout_WhenCartIsEmpty() {
-        when(cartItemRepository.findAllById(checkoutRequest.getSelectedCartItemIds()))
+        when(cartItemRepository.getUserCartItems(buyer.getUserId()))
                 .thenReturn(Collections.emptyList());
 
         assertThrows(ResourceNotFoundException.class, () -> {
@@ -149,7 +149,7 @@ class OrderServiceImplTest {
 
     @Test
     void testCheckout_WhenAddressIsNotFound() {
-        when(cartItemRepository.findAllById(checkoutRequest.getSelectedCartItemIds()))
+        when(cartItemRepository.getUserCartItems(buyer.getUserId()))
                 .thenReturn(cartItems);
         when(userAddressRepository.findById(checkoutRequest.getUserAddressId()))
                 .thenReturn(Optional.empty());
@@ -163,8 +163,36 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void testCheckout_WhenCartItemBelongsToAnotherUser() {
+        // Buyer's cart only holds item 1; item 2 belongs to someone else's cart.
+        when(cartItemRepository.getUserCartItems(buyer.getUserId()))
+                .thenReturn(List.of(cartItems.get(0)));
+
+        assertThrows(ResourceNotFoundException.class, () -> {
+            orderService.checkout(checkoutRequest);
+        });
+
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void testCheckout_WhenAddressBelongsToAnotherUser() {
+        when(cartItemRepository.getUserCartItems(buyer.getUserId()))
+                .thenReturn(cartItems);
+        when(userAddressRepository.findById(checkoutRequest.getUserAddressId()))
+                .thenReturn(Optional.of(sellerAddress));
+
+        assertThrows(ResourceNotFoundException.class, () -> {
+            orderService.checkout(checkoutRequest);
+        });
+
+        verify(inventoryService, never()).checkAndLockInventory(anyMap());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
     void testCheckout_WhenInventoryCannotBeLocked() {
-        when(cartItemRepository.findAllById(checkoutRequest.getSelectedCartItemIds()))
+        when(cartItemRepository.getUserCartItems(buyer.getUserId()))
                 .thenReturn(cartItems);
         when(userAddressRepository.findById(checkoutRequest.getUserAddressId()))
                 .thenReturn(Optional.of(userAddress));
@@ -181,7 +209,7 @@ class OrderServiceImplTest {
 
     @Test
     void testCheckout_WhenProductIsNotFoundForShipping() {
-        when(cartItemRepository.findAllById(checkoutRequest.getSelectedCartItemIds()))
+        when(cartItemRepository.getUserCartItems(buyer.getUserId()))
                 .thenReturn(cartItems);
         when(userAddressRepository.findById(checkoutRequest.getUserAddressId()))
                 .thenReturn(Optional.of(userAddress));
@@ -220,7 +248,7 @@ class OrderServiceImplTest {
 
     @Test
     void testCheckout_SuccessfulCheckout() {
-        when(cartItemRepository.findAllById(checkoutRequest.getSelectedCartItemIds()))
+        when(cartItemRepository.getUserCartItems(buyer.getUserId()))
                 .thenReturn(cartItems);
         when(userAddressRepository.findById(checkoutRequest.getUserAddressId()))
                 .thenReturn(Optional.of(userAddress));
@@ -266,7 +294,7 @@ class OrderServiceImplTest {
         assertEquals("PENDING", result.getXenditPaymentStatus());
         assertEquals("http://payment.url", result.getPaymentUrl());
 
-        verify(cartItemRepository).findAllById(checkoutRequest.getSelectedCartItemIds());
+        verify(cartItemRepository).getUserCartItems(buyer.getUserId());
         verify(userAddressRepository).findById(checkoutRequest.getUserAddressId());
         verify(inventoryService).checkAndLockInventory(anyMap());
         verify(orderRepository, times(3)).save(any(Order.class));

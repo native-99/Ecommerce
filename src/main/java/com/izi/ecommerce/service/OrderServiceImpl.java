@@ -50,17 +50,22 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse checkout(CheckoutRequest checkoutRequest) {
 
-        List<CartItem> selectedItems = cartItemRepository.findAllById(
-                checkoutRequest.getSelectedCartItemIds()
-        );
+        Long userId = checkoutRequest.getUserId();
+        Set<Long> selectedCartItemIds = new HashSet<>(checkoutRequest.getSelectedCartItemIds());
 
-        if (selectedItems.isEmpty()) {
+        // Only items from the current user's own cart can be checked out.
+        List<CartItem> selectedItems = cartItemRepository.getUserCartItems(userId).stream()
+                .filter(cartItem -> selectedCartItemIds.contains(cartItem.getCartItemId()))
+                .toList();
+
+        if (selectedItems.isEmpty() || selectedItems.size() != selectedCartItemIds.size()) {
             throw new ResourceNotFoundException("No cart items found for checkout");
         }
 
         UserAddress shippingAddress = userAddressRepository.findById(
                 checkoutRequest.getUserAddressId()
-        ).orElseThrow(() -> new ResourceNotFoundException(
+        ).filter(address -> userId.equals(address.getUserId()))
+                .orElseThrow(() -> new ResourceNotFoundException(
                 "Shipping address with id " + checkoutRequest.getUserAddressId() + " is not found"
         ));
 
