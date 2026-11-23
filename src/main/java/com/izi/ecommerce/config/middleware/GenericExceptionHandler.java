@@ -84,10 +84,12 @@ public class GenericExceptionHandler {
                     .build();
         }
 
+        // Log the full cause, but never send internal details (SQL, stack info) to the client.
+        log.error("Unhandled exception", exception);
         resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         return ErrorResponse.builder()
                 .code(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .message(exception.getMessage())
+                .message("Internal server error")
                 .timestamp(LocalDateTime.now())
                 .build();
     }
