@@ -54,7 +54,7 @@ public class AddressController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserInfo userInfo = (UserInfo) authentication.getPrincipal();
 
-        UserAddressResponse userAddressResponse = userAddressService.findById(addressId);
+        UserAddressResponse userAddressResponse = userAddressService.findById(userInfo.getUser().getUserId(), addressId);
         return ResponseEntity.ok(userAddressResponse);
     }
 
@@ -65,7 +65,7 @@ public class AddressController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserInfo userInfo = (UserInfo) authentication.getPrincipal();
 
-        UserAddressResponse response = userAddressService.update(addressId,
+        UserAddressResponse response = userAddressService.update(userInfo.getUser().getUserId(), addressId,
                 addressRequest);
         return ResponseEntity.ok(response);
     }
@@ -75,7 +75,7 @@ public class AddressController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserInfo userInfo = (UserInfo) authentication.getPrincipal();
 
-        userAddressService.delete(addressId);
+        userAddressService.delete(userInfo.getUser().getUserId(), addressId);
         return ResponseEntity.noContent().build();
     }
 

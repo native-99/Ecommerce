@@ -54,23 +54,17 @@ public class UserAddressServiceImpl implements UserAddressService {
     }
 
     @Override
-    public UserAddressResponse findById(Long id) {
-        UserAddress userAddress = userAddressRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Address with id " + id + " is not found"
-                ));
+    public UserAddressResponse findById(Long userId, Long addressId) {
+        UserAddress userAddress = findOwnedAddress(userId, addressId);
 
         return UserAddressResponse.fromUserAddress(userAddress);
     }
 
     @Override
     @Transactional
-    public UserAddressResponse update(Long addressId, UserAddressRequest request) {
+    public UserAddressResponse update(Long userId, Long addressId, UserAddressRequest request) {
 
-        UserAddress existingAddress = userAddressRepository.findById(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Address with id " + addressId + " is not found"
-                ));
+        UserAddress existingAddress = findOwnedAddress(userId, addressId);
 
         if (request.isDefault() && !existingAddress.getIsDefault()) {
             userAddressRepository.findByUserIdAndIsDefaultTrue(existingAddress.getUserId())
@@ -95,12 +89,9 @@ public class UserAddressServiceImpl implements UserAddressService {
 
     @Override
     @Transactional
-    public void delete(Long addressId) {
+    public void delete(Long userId, Long addressId) {
 
-        UserAddress existingAddress = userAddressRepository.findById(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Address with id " + addressId + " is not found"
-                ));
+        UserAddress existingAddress = findOwnedAddress(userId, addressId);
 
         userAddressRepository.delete(existingAddress);
 
@@ -120,14 +111,7 @@ public class UserAddressServiceImpl implements UserAddressService {
     @Transactional
     public UserAddressResponse setDefaultAddress(Long userId, Long addressId) {
 
-        UserAddress existingAddress = userAddressRepository.findById(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Address with id " + addressId + " is not found"
-                ));
-
-        if (!existingAddress.getUserId().equals(userId)) {
-            throw new ForbiddenAccessException("Address does not belong to this user");
-        }
+        UserAddress existingAddress = findOwnedAddress(userId, addressId);
 
         userAddressRepository.findByUserIdAndIsDefaultTrue(userId)
                 .ifPresent(address -> {
@@ -140,5 +124,18 @@ public class UserAddressServiceImpl implements UserAddressService {
         UserAddress savedAddress = userAddressRepository.save(existingAddress);
 
         return UserAddressResponse.fromUserAddress(savedAddress);
+    }
+
+    private UserAddress findOwnedAddress(Long userId, Long addressId) {
+        UserAddress address = userAddressRepository.findById(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Address with id " + addressId + " is not found"
+                ));
+
+        if (!address.getUserId().equals(userId)) {
+            throw new ForbiddenAccessException("Address does not belong to this user");
+        }
+
+        return address;
     }
 }

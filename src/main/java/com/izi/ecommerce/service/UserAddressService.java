@@ -11,11 +11,11 @@ public interface UserAddressService {
 
     List<UserAddressResponse> findByUserId(Long userId);
 
-    UserAddressResponse findById(Long id);
+    UserAddressResponse findById(Long userId, Long addressId);
 
-    UserAddressResponse update(Long addressId, UserAddressRequest request);
+    UserAddressResponse update(Long userId, Long addressId, UserAddressRequest request);
 
-    void delete(Long addressId);
+    void delete(Long userId, Long addressId);
 
     UserAddressResponse setDefaultAddress(Long userId, Long addressId);
 }
