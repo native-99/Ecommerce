@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import com.izi.ecommerce.model.UserInfo;
 import com.izi.ecommerce.service.JwtService;
+import com.izi.ecommerce.service.TokenRevocationService;
 import com.izi.ecommerce.service.UserDetailsImpl;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import java.io.IOException;
@@ -25,6 +26,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsImpl userDetailsService;
     private final JwtService jwtService;
     private final HandlerExceptionResolver handlerExceptionResolver;
+    private final TokenRevocationService tokenRevocationService;
 
     @Override
     protected void doFilterInternal(
@@ -40,7 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt = authHeader.substring(7);
 
         try {
-            if (jwtService.validateToken(jwt)) {
+            if (jwtService.validateToken(jwt) && !tokenRevocationService.isRevoked(jwt)) {
                 final String userIdentifier = jwtService.getUsernameFromToken(jwt);
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 

@@ -7,6 +7,7 @@ import com.izi.ecommerce.model.UserRegisterRequest;
 import com.izi.ecommerce.model.UserResponse;
 import com.izi.ecommerce.service.AuthService;
 import com.izi.ecommerce.service.JwtService;
+import com.izi.ecommerce.service.TokenRevocationService;
 import com.izi.ecommerce.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,6 +27,7 @@ public class AuthController {
     private final AuthService authService;
     private final UserService userService;
     private final JwtService jwtService;
+    private final TokenRevocationService tokenRevocationService;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> authenticate(
@@ -44,5 +47,16 @@ public class AuthController {
         UserResponse userResponse = userService.register(registerRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(userResponse);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            tokenRevocationService.revoke(authHeader.substring(7));
+        }
+
+        return ResponseEntity.noContent().build();
     }
 }

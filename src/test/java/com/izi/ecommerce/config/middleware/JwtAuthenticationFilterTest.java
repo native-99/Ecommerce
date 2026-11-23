@@ -4,6 +4,7 @@ import com.izi.ecommerce.entity.Role;
 import com.izi.ecommerce.entity.User;
 import com.izi.ecommerce.model.UserInfo;
 import com.izi.ecommerce.service.JwtService;
+import com.izi.ecommerce.service.TokenRevocationService;
 import com.izi.ecommerce.service.UserDetailsImpl;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
@@ -32,8 +33,9 @@ class JwtAuthenticationFilterTest {
     private final UserDetailsImpl userDetailsService = mock(UserDetailsImpl.class);
     private final JwtService jwtService = mock(JwtService.class);
     private final FilterChain filterChain = mock(FilterChain.class);
+    private final TokenRevocationService tokenRevocationService = mock(TokenRevocationService.class);
     private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(
-            userDetailsService, jwtService, mock(HandlerExceptionResolver.class));
+            userDetailsService, jwtService, mock(HandlerExceptionResolver.class), tokenRevocationService);
 
     private MockHttpServletRequest request;
     private MockHttpServletResponse response;
@@ -94,6 +96,15 @@ class JwtAuthenticationFilterTest {
         filter.doFilter(request, response, filterChain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+    }
+
+    @Test
+    void ignoresRevokedToken() throws Exception {
+        when(tokenRevocationService.isRevoked(TOKEN)).thenReturn(true);
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     private LocalDateTime toLocal(Instant instant) {
