@@ -1,6 +1,7 @@
 package com.izi.ecommerce.service;
 
 import com.izi.ecommerce.common.OrderStateTransition;
+import com.izi.ecommerce.common.errors.ForbiddenAccessException;
 import com.izi.ecommerce.common.errors.InventoryException;
 import com.izi.ecommerce.entity.CartItem;
 import com.izi.ecommerce.entity.Order;
@@ -176,6 +177,20 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Optional<Order> findOrderById(Long orderId) {
         return orderRepository.findById(orderId);
+    }
+
+    @Override
+    public Order findOrderOwnedByUser(Long orderId, Long userId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Order with id " + orderId + " not found"
+                ));
+
+        if (!order.getUserId().equals(userId)) {
+            throw new ForbiddenAccessException("Order does not belong to this user");
+        }
+
+        return order;
     }
 
     @Override

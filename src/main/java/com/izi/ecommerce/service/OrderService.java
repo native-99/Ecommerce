@@ -15,6 +15,8 @@ public interface OrderService {
 
     Optional<Order> findOrderById(Long orderId);
 
+    Order findOrderOwnedByUser(Long orderId, Long userId);
+
     List<Order> findOrdersByUserId(Long userId);
 
     List<Order> findOrdersByStatus(OrderStatus status);

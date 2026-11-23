@@ -91,6 +91,7 @@ public class OrderController {
 
     @PutMapping("/{orderId}/cancel")
     public ResponseEntity<Void> cancelOrder(@PathVariable Long orderId) {
+        orderService.findOrderOwnedByUser(orderId, getCurrentUserId());
         orderService.cancelOrder(orderId);
 
         return ResponseEntity.ok().build();
@@ -100,6 +101,7 @@ public class OrderController {
     public ResponseEntity<List<OrderItemResponse>> findOrderItems(
             @PathVariable Long orderId) {
 
+        orderService.findOrderOwnedByUser(orderId, getCurrentUserId());
         List<OrderItemResponse> orderItemResponses =
                 orderService.findOrderItemsByOrderId(orderId);
 
@@ -126,8 +128,15 @@ public class OrderController {
 
     @GetMapping("/{orderId}/total")
     public ResponseEntity<Double> calculateOrderTotal(@PathVariable Long orderId) {
+        orderService.findOrderOwnedByUser(orderId, getCurrentUserId());
         double total = orderService.calculateOrderTotal(orderId);
 
         return ResponseEntity.ok(total);
+    }
+
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserInfo userInfo = (UserInfo) authentication.getPrincipal();
+        return userInfo.getUser().getUserId();
     }
 }

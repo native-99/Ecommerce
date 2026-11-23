@@ -1,5 +1,6 @@
 package com.izi.ecommerce.service;
 
+import com.izi.ecommerce.common.errors.ForbiddenAccessException;
 import com.izi.ecommerce.common.errors.ResourceNotFoundException;
 import com.izi.ecommerce.entity.CartItem;
 import com.izi.ecommerce.entity.Order;
@@ -305,5 +306,30 @@ class OrderServiceImplTest {
         verify(shippingService, times(2)).calculateShippingRate(any());
         verify(paymentService).create(any(Order.class));
         verify(inventoryService).decreaseQuantity(anyMap());
+    }
+
+    @Test
+    void testFindOrderOwnedByUser_ReturnsOrderForOwner() {
+        Order order = Order.builder().orderId(5L).userId(buyer.getUserId()).build();
+        when(orderRepository.findById(5L)).thenReturn(Optional.of(order));
+
+        assertEquals(order, orderService.findOrderOwnedByUser(5L, buyer.getUserId()));
+    }
+
+    @Test
+    void testFindOrderOwnedByUser_RejectsOtherUser() {
+        Order order = Order.builder().orderId(5L).userId(buyer.getUserId()).build();
+        when(orderRepository.findById(5L)).thenReturn(Optional.of(order));
+
+        assertThrows(ForbiddenAccessException.class,
+                () -> orderService.findOrderOwnedByUser(5L, seller.getUserId()));
+    }
+
+    @Test
+    void testFindOrderOwnedByUser_WhenOrderIsNotFound() {
+        when(orderRepository.findById(5L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> orderService.findOrderOwnedByUser(5L, buyer.getUserId()));
     }
 }
