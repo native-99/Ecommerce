@@ -46,13 +46,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     )
     Page<Product> findByCategoryName(@Param("categoryName") String categoryName, Pageable pageable);
 
+    // JPQL (not nativeQuery): Hibernate only applies @Lock to JPQL/HQL and then emits SELECT ... FOR UPDATE.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query(
-            value = """
-            SELECT * FROM product
-            WHERE product_id = :id
-            """,
-            nativeQuery = true
-    )
+    @Query("SELECT p FROM Product p WHERE p.productId = :id")
     Optional<Product> findByIdWithPessimisticLock(@Param("id") Long id);
 }
