@@ -3,7 +3,10 @@ services:
     build: .
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
+      SPRING_PROFILES_ACTIVE: development
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/ecommerce
       SPRING_DATASOURCE_USERNAME: ecommerce_user
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
