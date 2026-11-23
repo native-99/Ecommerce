@@ -43,6 +43,9 @@ public class User {
     @Column(nullable = false)
     private Boolean enabled;
 
+    @Column(name = "password_changed_at")
+    private LocalDateTime passwordChangedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

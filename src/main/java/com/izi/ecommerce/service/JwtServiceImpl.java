@@ -55,6 +55,16 @@ public class JwtServiceImpl implements JwtService {
         return getClaims(token).getSubject();
     }
 
+    @Override
+    public Instant getIssuedAtFromToken(String token) {
+        return getClaims(token).getIssuedAt().toInstant();
+    }
+
+    @Override
+    public Instant getExpirationFromToken(String token) {
+        return getClaims(token).getExpiration().toInstant();
+    }
+
     private Claims getClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(signKey)
